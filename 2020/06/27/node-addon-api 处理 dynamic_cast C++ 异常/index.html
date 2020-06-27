@@ -12,7 +12,7 @@
 
 
 
-<title>Hello World | Handsomes08&#39;s Blog</title>
+<title>node-addon-api 处理 dynamic_cast C++ 异常 | Handsomes08&#39;s Blog</title>
 
 
 
@@ -107,73 +107,11 @@
             <div class="container">
     
     
-        <div class="post-toc">
-    <div class="tocbot-list">
-    </div>
-    <div class="tocbot-list-menu">
-        <a class="tocbot-toc-expand" onclick="expand_toc()">Expand all</a>
-        <a onclick="go_top()">Back to top</a>
-        <a onclick="go_bottom()">Go to bottom</a>
-    </div>
-</div>
-
-<script>
-    document.ready(
-        function () {
-            tocbot.init({
-                tocSelector: '.tocbot-list',
-                contentSelector: '.post-content',
-                headingSelector: 'h1, h2, h3, h4, h5',
-                collapseDepth: 1,
-                orderedList: false,
-                scrollSmooth: true,
-            })
-        }
-    )
-
-    function expand_toc() {
-        var b = document.querySelector(".tocbot-toc-expand");
-        tocbot.init({
-            tocSelector: '.tocbot-list',
-            contentSelector: '.post-content',
-            headingSelector: 'h1, h2, h3, h4, h5',
-            collapseDepth: 6,
-            orderedList: false,
-            scrollSmooth: true,
-        });
-        b.setAttribute("onclick", "collapse_toc()");
-        b.innerHTML = "Collapse all"
-    }
-
-    function collapse_toc() {
-        var b = document.querySelector(".tocbot-toc-expand");
-        tocbot.init({
-            tocSelector: '.tocbot-list',
-            contentSelector: '.post-content',
-            headingSelector: 'h1, h2, h3, h4, h5',
-            collapseDepth: 1,
-            orderedList: false,
-            scrollSmooth: true,
-        });
-        b.setAttribute("onclick", "expand_toc()");
-        b.innerHTML = "Expand all"
-    }
-
-    function go_top() {
-        window.scrollTo(0, 0);
-    }
-
-    function go_bottom() {
-        window.scrollTo(0, document.body.scrollHeight);
-    }
-
-</script>
-    
 
     
     <article class="post-wrap">
         <header class="post-header">
-            <h1 class="post-title">Hello World</h1>
+            <h1 class="post-title">node-addon-api 处理 dynamic_cast C++ 异常</h1>
             
                 <div class="post-meta">
                     
@@ -182,7 +120,7 @@
 
                     
                         <span class="post-time">
-                        Date: <a href="#">五月 16, 2020&nbsp;&nbsp;21:01:37</a>
+                        Date: <a href="#">六月 27, 2020&nbsp;&nbsp;15:27:17</a>
                         </span>
                     
                     
@@ -191,19 +129,16 @@
         </header>
 
         <div class="post-content">
-            <p>Welcome to <a href="https://hexo.io/" target="_blank" rel="noopener">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="noopener">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="noopener">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="noopener">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">"My New Post"</span></span><br></pre></td></tr></table></figure>
+            <p>上一篇简单介绍了 node-addon-api ，然后博主试着自己去封装一个librtmp的库，封装的过程很顺利，有 C/C++ 源码，只需要修改下对外暴露的几个API函数的返回值以及参数，将NodeJs传入的参数转换为 C++ 格式，并把返回值转换成 node 对象就可以了。</p>
+<p>但是实际在Js代码调用时，进程直接就崩溃了，尝试在 VsCode 中搭建 node-addon-api 的 C++ 调试环境，但是最终没有成功。貌似在 windows 机器上确实不好搭建。好在德熙大神帮我用 VS 附加的方式（在源码里写个循环，让进程不退出，然后附加之）终于能够调试上代码，并最终看到了下面这个异常：</p>
+<img src="/2020/06/27/node-addon-api%20%E5%A4%84%E7%90%86%20dynamic_cast%20C++%20%E5%BC%82%E5%B8%B8/2020-06-27-15-50-57.png" class="">
 
-<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="noopener">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+<p>从调试信息可以看到，错误出现在 dynamic_cast 那一句代码，但是从局部变量可以看到，用于转换的 packet 的类型与待转换的类型是一样的。作为一只 C++菜鸟，赶紧去请假 C++ 大佬。果然，大佬一眼就看出问题，应该是编译器的  <a href="https://baike.baidu.com/item/RTTI/5752573?fr=aladdin" target="_blank" rel="noopener">RTTI</a> 选项没有打开。</p>
+<p>RTTI（Run-Time Type Identification)，通过运行时类型信息程序能够使用基类的指针或引用来检查这些指针或引用所指的对象的实际派生类型。</p>
+<p>在C++工程中，开启RTTI就是在带上编译参数 /GR ，在 VS 里面则是修改启用运行时类型检查选项，如下图：</p>
+<img src="/2020/06/27/node-addon-api%20%E5%A4%84%E7%90%86%20dynamic_cast%20C++%20%E5%BC%82%E5%B8%B8/2020-06-27-16-10-28.png" class="">
 
-<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="noopener">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
 
-<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="noopener">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html" target="_blank" rel="noopener">Deployment</a></p>
 
         </div>
 
@@ -218,7 +153,7 @@
                 
                     <p class="copyright-item">
                         <span>Permalink:</span>
-                        <span><a href="http://handsome08.github.io/2020/05/16/hello-world/">http://handsome08.github.io/2020/05/16/hello-world/</a></span>
+                        <span><a href="http://handsome08.github.io/2020/06/27/node-addon-api%20%E5%A4%84%E7%90%86%20dynamic_cast%20C++%20%E5%BC%82%E5%B8%B8/">http://handsome08.github.io/2020/06/27/node-addon-api%20%E5%A4%84%E7%90%86%20dynamic_cast%20C++%20%E5%BC%82%E5%B8%B8/</a></span>
                     </p>
                 
                 
@@ -246,8 +181,8 @@
         </section>
         <section class="post-nav">
             
-                <a class="prev" rel="prev" href="/2020/05/17/%E8%AF%A6%E8%A7%A3YUV%E4%B8%AD%E7%9A%84Stride/">详解YUV中的Stride</a>
             
+            <a class="next" rel="next" href="/2020/06/19/node-addon-api%20%E5%85%A5%E9%97%A8%EF%BC%88Windows%20NodeJs%20%E8%B0%83%E7%94%A8%20C++%EF%BC%89/">node-addon-api 入门（Windows NodeJs 调用 C++）</a>
             
         </section>
 
