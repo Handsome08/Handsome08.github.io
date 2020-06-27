@@ -150,7 +150,7 @@
 <ol>
 <li>Init 方法里面加了详细的注释，简单介绍每行代码的作用</li>
 <li>构造函数记得调用基类对应的构造函数 Napi::ObjectWrap<MyObject>(info)</li>
-<li>函数参数 Napi::CallbackInfo 为一个数组，可以用 Length 获取数组长度，用索引符号获取每个参数，并使用 As<T> 进行类型转换</li>
+<li>函数参数 Napi::CallbackInfo 为一个数组，可以用 Length 获取数组长度，用索引符号获取每个参数，并使用 As&lt;T&gt; 进行类型转换</li>
 </ol>
 <p>最后，需要将这个对象以 node module 形式暴露出去，由 addon.cc 完成：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;napi.h&gt;</span><br><span class="line">#include &quot;myobject.h&quot;</span><br><span class="line"></span><br><span class="line">Napi::Object InitAll(Napi::Env env, Napi::Object exports) &#123;</span><br><span class="line">  return MyObject::Init(env, exports);</span><br><span class="line">&#125;</span><br><span class="line">&#x2F;&#x2F; 对外暴露 addon 模块，其中有 InitAll 返回的对象， 即封装的 MyObject 对象</span><br><span class="line">NODE_API_MODULE(addon, InitAll)</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F; 其实直接在 myobject.cc 中调用 NODE_API_MODULE(addon, Init) 也是可以的</span><br></pre></td></tr></table></figure>
