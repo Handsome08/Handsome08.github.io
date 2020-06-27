@@ -133,13 +133,16 @@
 <p>但是实际在Js代码调用时，进程直接就崩溃了，尝试在 VsCode 中搭建 node-addon-api 的 C++ 调试环境，但是最终没有成功。貌似在 windows 机器上确实不好搭建。好在德熙大神帮我用 VS 附加的方式（在源码里写个循环，让进程不退出，然后附加之）终于能够调试上代码，并最终看到了下面这个异常：</p>
 <img src="/2020/06/27/node-addon-api%20%E5%A4%84%E7%90%86%20dynamic_cast%20C++%20%E5%BC%82%E5%B8%B8/2020-06-27-15-50-57.png" class="">
 
-<p>从调试信息可以看到，错误出现在 dynamic_cast 那一句代码，但是从局部变量可以看到，用于转换的 packet 的类型与待转换的类型是一样的。作为一只 C++菜鸟，赶紧去请假 C++ 大佬。果然，大佬一眼就看出问题，应该是编译器的  <a href="https://baike.baidu.com/item/RTTI/5752573?fr=aladdin" target="_blank" rel="noopener">RTTI</a> 选项没有打开。</p>
+<p>从调试信息可以看到，错误出现在 dynamic_cast 那一句代码，但是从局部变量可以看到，用于转换的 packet 的类型与待转换的类型是一样的。作为一只 C++菜鸟，赶紧去请教 C++ 大佬。果然，大佬一眼就看出问题，应该是编译器的  <a href="https://baike.baidu.com/item/RTTI/5752573?fr=aladdin" target="_blank" rel="noopener">RTTI</a> 选项没有打开。</p>
 <p>RTTI（Run-Time Type Identification)，通过运行时类型信息程序能够使用基类的指针或引用来检查这些指针或引用所指的对象的实际派生类型。</p>
 <p>在C++工程中，开启RTTI就是在带上编译参数 /GR ，在 VS 里面则是修改启用运行时类型检查选项，如下图：</p>
 <img src="/2020/06/27/node-addon-api%20%E5%A4%84%E7%90%86%20dynamic_cast%20C++%20%E5%BC%82%E5%B8%B8/2020-06-27-16-10-28.png" class="">
 
+<p>所以问题变成如何在 node-addon-api 中配置 /GR 。经过一番资料查阅，终于找到了方法，按照下图在 bingding.gyp 文件中添加红框内的配置即可：</p>
+<img src="/2020/06/27/node-addon-api%20%E5%A4%84%E7%90%86%20dynamic_cast%20C++%20%E5%BC%82%E5%B8%B8/2020-06-27-16-19-59.png" class="">
 
-
+<p>这个问题其实在编译期间就已经有 warning 了，不过大部分开发都是会忽略warning的。。。</p>
+<img src="/2020/06/27/node-addon-api%20%E5%A4%84%E7%90%86%20dynamic_cast%20C++%20%E5%BC%82%E5%B8%B8/2020-06-27-16-22-10.png" class="">
         </div>
 
         
