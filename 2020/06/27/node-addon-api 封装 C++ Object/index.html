@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="author" content="Handsome08">
+
+
+
+
+
+<title>node-addon-api 封装 C++ Object | Handsomes08&#39;s Blog</title>
+
+
+
+    <link rel="icon" href="/favicon.ico">
+
+
+
+
+    <!-- stylesheets list from _config.yml -->
+    
+    <link rel="stylesheet" href="/css/style.css">
+    
+
+
+
+    <!-- scripts list from _config.yml -->
+    
+    <script src="/js/script.js"></script>
+    
+    <script src="/js/tocbot.min.js"></script>
+    
+
+
+
+    
+    
+        
+    
+
+
+<meta name="generator" content="Hexo 4.2.1"></head>
+<body>
+    <div class="wrapper">
+        <header>
+    <nav class="navbar">
+        <div class="container">
+            <div class="navbar-header header-logo"><a href="/">Handsome&#39;s Blog</a></div>
+            <div class="menu navbar-right">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+                <input id="switch_default" type="checkbox" class="switch_default">
+                <label for="switch_default" class="toggleBtn"></label>
+            </div>
+        </div>
+    </nav>
+
+    
+    <nav class="navbar-mobile" id="nav-mobile">
+        <div class="container">
+            <div class="navbar-header">
+                <div>
+                    <a href="/">Handsome&#39;s Blog</a><a id="mobile-toggle-theme">·&nbsp;Light</a>
+                </div>
+                <div class="menu-toggle" onclick="mobileBtn()">&#9776; Menu</div>
+            </div>
+            <div class="menu" id="mobile-menu">
+                
+                    <a class="menu-item" href="/archives">Posts</a>
+                
+                    <a class="menu-item" href="/category">Categories</a>
+                
+                    <a class="menu-item" href="/tag">Tags</a>
+                
+                    <a class="menu-item" href="/about">About</a>
+                
+            </div>
+        </div>
+    </nav>
+
+</header>
+<script>
+    var mobileBtn = function f() {
+        var toggleMenu = document.getElementsByClassName("menu-toggle")[0];
+        var mobileMenu = document.getElementById("mobile-menu");
+        if(toggleMenu.classList.contains("active")){
+           toggleMenu.classList.remove("active")
+            mobileMenu.classList.remove("active")
+        }else{
+            toggleMenu.classList.add("active")
+            mobileMenu.classList.add("active")
+        }
+    }
+</script>
+        <div class="main">
+            <div class="container">
+    
+    
+
+    
+    <article class="post-wrap">
+        <header class="post-header">
+            <h1 class="post-title">node-addon-api 封装 C++ Object</h1>
+            
+                <div class="post-meta">
+                    
+                        Author: <a itemprop="author" rel="author" href="/">Handsome08</a>
+                    
+
+                    
+                        <span class="post-time">
+                        Date: <a href="#">六月 27, 2020&nbsp;&nbsp;16:43:52</a>
+                        </span>
+                    
+                    
+                </div>
+            
+        </header>
+
+        <div class="post-content">
+            <p>这篇文章简单讲一下如何使用 node-addon-api 封装一个 C++ Object。</p>
+<p>我们要达到的效果就是在 Js 代码中能创建这个 C++ 对象，并调用里面的方法。</p>
+<p>这里使用官方的demo <a href="https://github.com/nodejs/node-addon-examples" target="_blank" rel="noopener">node-addon-examples</a> 其中的第六个例子（6_object_wrap）：</p>
+<img src="/2020/06/27/node-addon-api%20%E5%B0%81%E8%A3%85%20C++%20Object/2020-06-27-17-02-19.png" class="">
+
+<p>myobject.h 为待封装对象的头文件：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;napi.h&gt;</span><br><span class="line"></span><br><span class="line">class MyObject : public Napi::ObjectWrap&lt;MyObject&gt; &#123; &#x2F;&#x2F; 必须公开继承 Napi::ObjectWrap&lt;T&gt;</span><br><span class="line"> public:</span><br><span class="line">  static Napi::Object Init(Napi::Env env, Napi::Object exports); &#x2F;&#x2F; 静态方法，用户暴露该对象给 Js</span><br><span class="line">  MyObject(const Napi::CallbackInfo&amp; info); &#x2F;&#x2F; 构造函数</span><br><span class="line"></span><br><span class="line"> private:</span><br><span class="line">  static Napi::FunctionReference constructor; &#x2F;&#x2F; 函数引用构造器</span><br><span class="line"></span><br><span class="line">  &#x2F;&#x2F; 定义的方法，private 即可，因为对外暴露是通过上面的 Init 完成的</span><br><span class="line">  &#x2F;&#x2F; 方法的返回值必须为 napi 中定义的对象 (Napi::Value、Napi::Object等)</span><br><span class="line">  &#x2F;&#x2F; 方法参数必须为 const Napi::CallbackInfo&amp; info , 这是一个数组参数，需要在实现时进行显示转换</span><br><span class="line">  Napi::Value GetValue(const Napi::CallbackInfo&amp; info); </span><br><span class="line">  Napi::Value PlusOne(const Napi::CallbackInfo&amp; info);</span><br><span class="line">  Napi::Value Multiply(const Napi::CallbackInfo&amp; info);</span><br><span class="line"></span><br><span class="line">  double value_;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>其中有几个点：</p>
+<ol>
+<li>类必须公开继承  Napi::ObjectWrap<T> ，其中 T 为当前类的类型</li>
+<li>所有方法包括构造函数参数均为 const Napi::CallbackInfo&amp; info ，这是一个数组参数，需要在方法实现时进行显示转换</li>
+<li>方法的返回值必须为 napi 中定义的对象 (Napi::Value、Napi::Object等)，Napi命名空间中定义了 Napi::String、Napi::Boolean 和 Napi::Number 类型，均继承自 Napi::Value。</li>
+<li>对象的暴露通过一个静态方法完成，该方法有两个参数，Napi::Env 和 Napi::Object 。Napi::Env 是处理上下文相关的，暂不进行说明；Napi::Object 则是一个空白的对象，需要后面对其赋予类名、方法等，最后暴露给 Js 调用方。</li>
+</ol>
+<p>myobject.cc 是对 myobject.h 的实现：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br></pre></td><td class="code"><pre><span class="line">#include &quot;myobject.h&quot;</span><br><span class="line"></span><br><span class="line">Napi::FunctionReference MyObject::constructor;  &#x2F;&#x2F; 这一句不能少哟，否则 Init 方法编译不通过</span><br><span class="line"></span><br><span class="line">Napi::Object MyObject::Init(Napi::Env env, Napi::Object exports) &#123;</span><br><span class="line">  Napi::HandleScope scope(env);</span><br><span class="line"></span><br><span class="line">  &#x2F;&#x2F;定义类</span><br><span class="line">  Napi::Function func &#x3D;</span><br><span class="line">      DefineClass(env,</span><br><span class="line">                  &quot;MyObject&quot;, &#x2F;&#x2F; 类名</span><br><span class="line">                  &#x2F;&#x2F; 定义类中的方法</span><br><span class="line">                  &#123;InstanceMethod(&quot;plusOne&quot;, &amp;MyObject::PlusOne),</span><br><span class="line">                   InstanceMethod(&quot;value&quot;, &amp;MyObject::GetValue),</span><br><span class="line">                   InstanceMethod(&quot;multiply&quot;, &amp;MyObject::Multiply)&#125;);</span><br><span class="line"></span><br><span class="line">  &#x2F;&#x2F; 使对象持久。。</span><br><span class="line">  constructor &#x3D; Napi::Persistent(func);</span><br><span class="line">  &#x2F;&#x2F; 抑制对象销毁</span><br><span class="line">  constructor.SuppressDestruct();</span><br><span class="line"></span><br><span class="line">  &#x2F;&#x2F;设置 exports 对象</span><br><span class="line">  exports.Set(&quot;MyObject&quot;, func);</span><br><span class="line">  return exports;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">MyObject::MyObject(const Napi::CallbackInfo&amp; info)</span><br><span class="line">    : Napi::ObjectWrap&lt;MyObject&gt;(info) &#123;</span><br><span class="line">  Napi::Env env &#x3D; info.Env();</span><br><span class="line">  Napi::HandleScope scope(env);</span><br><span class="line"></span><br><span class="line">  int length &#x3D; info.Length();</span><br><span class="line"></span><br><span class="line">  &#x2F;&#x2F; 判断参数个数以及参数类型</span><br><span class="line">  if (length &lt;&#x3D; 0 || !info[0].IsNumber()) &#123;</span><br><span class="line">    Napi::TypeError::New(env, &quot;Number expected&quot;).ThrowAsJavaScriptException(); &#x2F;&#x2F; 参数不对，抛出异常</span><br><span class="line">    return;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  Napi::Number value &#x3D; info[0].As&lt;Napi::Number&gt;(); &#x2F;&#x2F; 通过 .As&lt;T&gt; 进行参数的转换</span><br><span class="line">  this-&gt;value_ &#x3D; value.DoubleValue();</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">Napi::Value MyObject::GetValue(const Napi::CallbackInfo&amp; info) &#123;</span><br><span class="line">  double num &#x3D; this-&gt;value_;</span><br><span class="line"></span><br><span class="line">  &#x2F;&#x2F; 使用一个 double对象 构造一个 Napi::Number 对象并返回</span><br><span class="line">  return Napi::Number::New(info.Env(), num);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">Napi::Value MyObject::PlusOne(const Napi::CallbackInfo&amp; info) &#123;</span><br><span class="line">  this-&gt;value_ &#x3D; this-&gt;value_ + 1;</span><br><span class="line"></span><br><span class="line">  return MyObject::GetValue(info);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">Napi::Value MyObject::Multiply(const Napi::CallbackInfo&amp; info) &#123;</span><br><span class="line">  Napi::Number multiple;</span><br><span class="line">  if (info.Length() &lt;&#x3D; 0 || !info[0].IsNumber()) &#123;</span><br><span class="line">    multiple &#x3D; Napi::Number::New(info.Env(), 1);</span><br><span class="line">  &#125; else &#123;</span><br><span class="line">    multiple &#x3D; info[0].As&lt;Napi::Number&gt;();</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  Napi::Object obj &#x3D; constructor.New(</span><br><span class="line">      &#123;Napi::Number::New(info.Env(), this-&gt;value_ * multiple.DoubleValue())&#125;);</span><br><span class="line"></span><br><span class="line">  return obj;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中：</p>
+<ol>
+<li>Init 方法里面加了详细的注释，简单介绍每行代码的作用</li>
+<li>构造函数记得调用基类对应的构造函数 Napi::ObjectWrap<MyObject>(info)</li>
+<li>函数参数 Napi::CallbackInfo 为一个数组，可以用 Length 获取数组长度，用索引符号获取每个参数，并使用 As<T> 进行类型转换</li>
+</ol>
+<p>最后，需要将这个对象以 node module 形式暴露出去，由 addon.cc 完成：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">#include &lt;napi.h&gt;</span><br><span class="line">#include &quot;myobject.h&quot;</span><br><span class="line"></span><br><span class="line">Napi::Object InitAll(Napi::Env env, Napi::Object exports) &#123;</span><br><span class="line">  return MyObject::Init(env, exports);</span><br><span class="line">&#125;</span><br><span class="line">&#x2F;&#x2F; 对外暴露 addon 模块，其中有 InitAll 返回的对象， 即封装的 MyObject 对象</span><br><span class="line">NODE_API_MODULE(addon, InitAll)</span><br><span class="line"></span><br><span class="line">&#x2F;&#x2F; 其实直接在 myobject.cc 中调用 NODE_API_MODULE(addon, Init) 也是可以的</span><br></pre></td></tr></table></figure>
+
+<p>最终，可以在 js 代码进行调用：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">var addon &#x3D; require(&#39;bindings&#39;)(&#39;addon&#39;);</span><br><span class="line"></span><br><span class="line">var obj &#x3D; new addon.MyObject(10);</span><br><span class="line">console.log( obj.plusOne() ); &#x2F;&#x2F; 11</span><br><span class="line">console.log( obj.plusOne() ); &#x2F;&#x2F; 12</span><br><span class="line">console.log( obj.plusOne() ); &#x2F;&#x2F; 13</span><br><span class="line"></span><br><span class="line">console.log( obj.multiply().value() ); &#x2F;&#x2F; 13</span><br><span class="line">console.log( obj.multiply(10).value() ); &#x2F;&#x2F; 130</span><br><span class="line"></span><br><span class="line">var newobj &#x3D; obj.multiply(-1);</span><br><span class="line">console.log( newobj.value() ); &#x2F;&#x2F; -13</span><br><span class="line">console.log( obj &#x3D;&#x3D;&#x3D; newobj ); &#x2F;&#x2F; false</span><br></pre></td></tr></table></figure>
+        </div>
+
+        
+            <section class="post-copyright">
+                
+                    <p class="copyright-item">
+                        <span>Author:</span>
+                        <span>Handsome08</span>
+                    </p>
+                
+                
+                    <p class="copyright-item">
+                        <span>Permalink:</span>
+                        <span><a href="http://handsome08.github.io/2020/06/27/node-addon-api%20%E5%B0%81%E8%A3%85%20C++%20Object/">http://handsome08.github.io/2020/06/27/node-addon-api%20%E5%B0%81%E8%A3%85%20C++%20Object/</a></span>
+                    </p>
+                
+                
+                
+                     <p class="copyright-item">
+                         <span>Slogan:</span>
+                         <span>Harder , Luckier !</span>
+                     </p>
+                
+
+            </section>
+        
+        <section class="post-tags">
+            <div>
+                <span>Tag(s):</span>
+                <span class="tag">
+                    
+                    
+                        <a href="/tags/node-addon-api-NodeJs-C/"># node-addon-api NodeJs C++</a>
+                    
+                        
+                </span>
+            </div>
+            <div>
+                <a href="javascript:window.history.back();">back</a>
+                <span>· </span>
+                <a href="/">home</a>
+            </div>
+        </section>
+        <section class="post-nav">
+            
+            
+            <a class="next" rel="next" href="/2020/06/27/node-addon-api%20%E5%A4%84%E7%90%86%20dynamic_cast%20C++%20%E5%BC%82%E5%B8%B8/">node-addon-api 处理 dynamic_cast C++ 异常</a>
+            
+        </section>
+
+
+    </article>
+</div>
+
+        </div>
+        <footer id="footer" class="footer">
+    <div class="copyright">
+        <span>© Handsome08 | Powered by <a href="https://hexo.io" target="_blank">Hexo</a> & <a href="https://github.com/Siricee/hexo-theme-Chic" target="_blank">Chic</a></span>
+    </div>
+</footer>
+
+    </div>
+</body>
+</html>
